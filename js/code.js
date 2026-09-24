@@ -24,6 +24,118 @@ function switchAuthTab(tab) {
 		: "Join ContactSphere and organize your contacts effortlessly";
 }
 
+function showToast(message, type = "success") {
+	const toast = document.createElement("div");
+	toast.className = `toast toast-${type}`;
+	toast.textContent = message;
+	document.getElementById("toastContainer").appendChild(toast);
+
+	setTimeout(() => toast.remove(), 3000);
+}
+
+function doLogin() {
+	const login = document.getElementById("loginName").value.trim();
+	const password = document.getElementById("loginPassword").value;
+
+	if (!login || !password) {
+		showToast("Username and password are required.", "error");
+		return;
+	}
+
+	const xhr = new XMLHttpRequest();
+	xhr.open("POST", "LAMPAPI/Login.php", true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState !== XMLHttpRequest.DONE) {
+			return;
+		}
+
+		if (xhr.status !== 200) {
+			showToast("Unable to sign in. Please try again.", "error");
+			return;
+		}
+
+		let response;
+		try {
+			response = JSON.parse(xhr.responseText);
+		} catch (error) {
+			showToast("The sign-in response was invalid.", "error");
+			return;
+		}
+
+		if (!response || Number(response.id) <= 0 || response.error) {
+			showToast(response && response.error ? response.error : "Invalid username or password.", "error");
+			return;
+		}
+
+		userId = Number(response.id);
+		firstName = response.firstName || "";
+		lastName = response.lastName || "";
+		saveCookie();
+		showToast(`Welcome, ${firstName} ${lastName}`.trim() + "!", "success");
+		showDashboard();
+	};
+	xhr.onerror = function () {
+		showToast("Network error. Please try again.", "error");
+	};
+
+	xhr.send(JSON.stringify({ login, password }));
+}
+
+function doRegister() {
+	const firstNameValue = document.getElementById("regFirstName").value.trim();
+	const lastNameValue = document.getElementById("regLastName").value.trim();
+	const login = document.getElementById("regLogin").value.trim();
+	const password = document.getElementById("regPassword").value;
+
+	if (!firstNameValue || !lastNameValue || !login || !password) {
+		showToast("All registration fields are required.", "error");
+		return;
+	}
+
+	const xhr = new XMLHttpRequest();
+	xhr.open("POST", "LAMPAPI/Register.php", true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState !== XMLHttpRequest.DONE) {
+			return;
+		}
+
+		if (xhr.status !== 200) {
+			showToast("Unable to register. Please try again.", "error");
+			return;
+		}
+
+		let response;
+		try {
+			response = JSON.parse(xhr.responseText);
+		} catch (error) {
+			showToast("The registration response was invalid.", "error");
+			return;
+		}
+
+		if (!response || Number(response.id) <= 0 || response.error) {
+			showToast(response && response.error ? response.error : "Registration failed.", "error");
+			return;
+		}
+
+		document.getElementById("registerForm").reset();
+		document.getElementById("loginName").value = login;
+		showToast("Account created successfully.", "success");
+		switchAuthTab("login");
+	};
+	xhr.onerror = function () {
+		showToast("Network error. Please try again.", "error");
+	};
+
+	xhr.send(JSON.stringify({
+		firstName: firstNameValue,
+		lastName: lastNameValue,
+		login,
+		password
+	}));
+}
+
 function saveCookie() {
 	const expires = new Date(Date.now() + 30 * 60 * 1000).toUTCString();
 	const cookieOptions = `expires=${expires}; path=/`;
