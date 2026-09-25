@@ -60,7 +60,7 @@
                     </div>
 
                     <!-- Login Form -->
-                    <form id="loginForm" onsubmit="event.preventDefault(); doLogin(event);">
+                    <form id="loginForm" onsubmit="event.preventDefault(); doLogin();">
                         <div id="loginError" class="text-danger hidden" role="alert"></div>
                         <div class="form-group">
                             <label for="loginName">Username</label>
@@ -92,7 +92,7 @@
                     </form>
 
                     <!-- Registration Form -->
-                    <form id="registerForm" class="hidden" onsubmit="event.preventDefault(); doRegister(event);">
+                    <form id="registerForm" class="hidden" onsubmit="event.preventDefault(); doRegister();">
                         <div id="registerError" class="text-danger hidden" role="alert"></div>
                         <div class="form-row">
                             <div class="form-group">
