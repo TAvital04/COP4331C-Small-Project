@@ -1,254 +1,227 @@
-# ContactSphere — Developer & Operations Setup Guide (Milestone 7)
+# Small Project (ContactSphere) - Developer & Contributor Guide (`README_DEV.md`)
 
-Welcome to the **ContactSphere** developer guide and production operations manual. This document details server provisioning, local environment setup, CI/CD deployment routines, accessibility compliance auditing, and end-to-end acceptance testing procedures.
+This guide provides complete step-by-step instructions for team members working on the **Small Project Personal Contact Manager** (`small-project`). It details team onboarding, local MySQL database setup, connecting to the DigitalOcean server via SSH (`ssh root@talavital.com`), deployment, API endpoint verification, and testing.
 
 ---
 
-## 1. Server Provisioning & LAMP Stack Configuration (Tal)
+## 📋 Table of Contents
 
-### 1.1 Ubuntu Droplet Setup
-* **Operating System**: Ubuntu 22.04 LTS / 24.04 LTS
-* **Web Server**: Apache 2.4 (`apache2`)
-* **Database**: MySQL Server 8.0 (`mysql-server`)
-* **PHP Engine**: PHP 8.1+ (`php`, `libapache2-mod-php`, `php-mysql`)
+1. [Step 1: Team Access & GitHub Invites](#step-1-team-access--github-invites)
+2. [Step 2: Terminal Setup & Repository Cloning](#step-2-terminal-setup--repository-cloning)
+3. [Step 3: Environment Credentials Setup (`.env`)](#step-3-environment-credentials-setup-env)
+4. [Step 4: Local MySQL Database Initialization](#step-4-local-mysql-database-initialization)
+5. [Step 5: Remote Server SSH Access & Deployment (`ssh root@talavital.com`)](#step-5-remote-server-ssh-access--deployment-ssh-roottalavitalcom)
+6. [Step 6: Local & Live Testing & Verification](#step-6-local--live-testing--verification)
+7. [Step 7: Role Responsibilities & Workflows](#step-7-role-responsibilities--workflows)
+8. [Step 8: Git Branching & Pull Requests](#step-8-git-branching--pull-requests)
 
-#### Package Installation
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install apache2 php libapache2-mod-php php-mysql mysql-server git -y
+---
+
+## Step 1: Team Access & GitHub Invites
+
+1. Send your **GitHub username** to your Project Manager.
+2. Accept the repository invitation at [github.com/notifications](https://github.com/notifications).
+3. Configure your local Git identity:
+   ```bash
+   git config --global user.name "Your Name"
+   git config --global user.email "your.email@example.com"
+   ```
+
+---
+
+## Step 2: Terminal Setup & Repository Cloning
+
+1. Open your terminal:
+   - **Windows**: Open **PowerShell** or **Git Bash**.
+   - **Mac**: Open **Terminal**.
+2. Clone the repository:
+   ```bash
+   cd ~/Documents
+   git clone <REPOSITORY_URL>
+   cd "LAMP Stack"
+   ```
+
+---
+
+## Step 3: Environment Credentials Setup (`.env`)
+
+Create your local `.env` configuration file in the project root:
+- **Windows (PowerShell)**:
+  ```powershell
+  Copy-Item .env.example .env
+  ```
+- **Mac/Linux**:
+  ```bash
+  cp .env.example .env
+  ```
+
+Ensure `.env` matches your local database settings:
+```env
+DB_HOST=localhost
+DB_USER=TheBeast
+DB_PASSWORD=WeLoveCOP4331
+DB_NAME=COP4331
 ```
 
-### 1.2 Apache VirtualHost Configuration
-Create `/etc/apache2/sites-available/small-project.conf`:
-```apache
-<VirtualHost *:80>
-    ServerName localhost
-    DocumentRoot /var/www/COP4331C-Small-Project
+---
 
-    <Directory /var/www/COP4331C-Small-Project>
-        Options -Indexes +FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
+## Step 4: Local MySQL Database Initialization
 
-    ErrorLog ${APACHE_LOG_DIR}/contactsphere_error.log
-    CustomLog ${APACHE_LOG_DIR}/contactsphere_access.log combined
-</VirtualHost>
+### A. Start MySQL Service
+- **Windows (XAMPP)**: Start Apache and MySQL from XAMPP Control Panel.
+- **Mac/Linux**: Run `sudo service mysql start` or `brew services start mysql`.
+
+### B. Execute Database Setup Script
+Log into MySQL terminal shell:
+```bash
+mysql -u root -p
 ```
 
-Enable site and URL rewrite module:
+Inside the MySQL prompt (`mysql>`), copy and run:
+
+```sql
+-- 1. Create Database
+CREATE DATABASE IF NOT EXISTS COP4331;
+USE COP4331;
+
+-- 2. Create Users Table
+CREATE TABLE IF NOT EXISTS Users (
+  ID INT NOT NULL AUTO_INCREMENT,
+  FirstName VARCHAR(50) NOT NULL DEFAULT '',
+  LastName VARCHAR(50) NOT NULL DEFAULT '',
+  Login VARCHAR(50) NOT NULL DEFAULT '',
+  Password VARCHAR(50) NOT NULL DEFAULT '',
+  PRIMARY KEY (ID)
+) ENGINE = InnoDB;
+
+-- 3. Create Contacts Table
+CREATE TABLE IF NOT EXISTS Contacts (
+  ID INT NOT NULL AUTO_INCREMENT,
+  FirstName VARCHAR(50) NOT NULL DEFAULT '',
+  LastName VARCHAR(50) NOT NULL DEFAULT '',
+  Phone VARCHAR(50) NOT NULL DEFAULT '',
+  Email VARCHAR(50) NOT NULL DEFAULT '',
+  UserID INT NOT NULL DEFAULT '0',
+  PRIMARY KEY (ID)
+) ENGINE = InnoDB;
+
+-- 4. Create User & Grant Privileges
+CREATE USER IF NOT EXISTS 'TheBeast'@'localhost' IDENTIFIED BY 'WeLoveCOP4331';
+GRANT ALL PRIVILEGES ON COP4331.* TO 'TheBeast'@'localhost';
+FLUSH PRIVILEGES;
+
+-- 5. Seed Test Data
+INSERT INTO Users (FirstName, LastName, Login, Password) VALUES ('Alex', 'Smith', 'alexsmith', 'pass123');
+INSERT INTO Contacts (FirstName, LastName, Phone, Email, UserID) 
+VALUES ('John', 'Doe', '555-123-4567', 'john@example.com', 1),
+       ('Sarah', 'Conner', '555-987-6543', 'sarah@example.com', 1);
+
+EXIT;
+```
+
+---
+
+## Step 5: Remote Server SSH Access & Deployment (`ssh root@talavital.com`)
+
+WARNING: This is a **PRODUCTION SERVER**. Do not make any changes to the files on this server that are not tested and approved by the team. If you want to test changes, proceed to Step 6.
+
+To access the live DigitalOcean droplet and deploy your changes to `talavital.com`:
+
+### 1. SSH into the Live Remote Server
+Open your terminal (PowerShell, Git Bash, or macOS Terminal) and connect:
 ```bash
-sudo a2ensite small-project.conf
-sudo a2enmod rewrite
+ssh root@talavital.com
+```
+*(Or use `ssh root@YOUR_SERVER_IP` if testing via direct IP address).*
+
+### 2. Navigate to Apache Web Root Directory
+Once logged into the server shell prompt (`root@ubuntu:~#`), go to Apache's root web folder:
+```bash
+cd /var/www/html
+```
+
+### 3. Pull Latest Code Updates from GitHub
+Pull the latest pushed commits from the `main` branch:
+```bash
+git pull origin main
+```
+
+### 5. Restart Apache Service (Optional)
+If PHP configuration changes were made:
+```bash
 sudo systemctl restart apache2
 ```
 
-Set file ownership and permissions for the Apache web user (`www-data`):
+---
+
+## Step 6: Local & Live Testing & Verification
+
+### A. Start Local Web Server (PHP Built-In Server)
+Open terminal inside the `LAMP Stack` repository folder and run:
 ```bash
-sudo chown -R www-data:www-data /var/www/COP4331C-Small-Project
-sudo chmod -R 755 /var/www/COP4331C-Small-Project
+php -S localhost:8000
 ```
-
-### 1.3 Secure Remote Database Configuration
-1. Run MySQL security hardening:
-   ```bash
-   sudo mysql_secure_installation
-   ```
-2. Create database and user restricted to local socket connections (`localhost` / `127.0.0.1`):
-   ```sql
-   CREATE DATABASE COP4331 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'TheBeast'@'localhost' IDENTIFIED BY 'WeLoveCOP4331';
-   GRANT ALL PRIVILEGES ON COP4331.* TO 'TheBeast'@'localhost';
-   FLUSH PRIVILEGES;
-   ```
-3. Enforce local socket binding in `/etc/mysql/mysql.conf.d/mysqld.cnf`:
-   ```ini
-   [mysqld]
-   bind-address = 127.0.0.1
-   mysqlx-bind-address = 127.0.0.1
-   ```
-   Restart MySQL:
-   ```bash
-   sudo systemctl restart mysql
-   ```
+Keep this terminal window open while testing.
 
 ---
 
-## 2. Developer Setup Guide (Tal)
+### B. Front-End Testing
+1. Access the application in your browser:
+   - **Local Browser**: `http://localhost:8000/COP4331C/small-project/index.html`
+   - **Live Domain**: `https://talavital.com/COP4331C/small-project/index.html`
+2. Test User Workflows:
+   - **Registration**: Switch tab to **Register**, create a new account, verify redirect to Sign In.
+   - **Login**: Log in with `alexsmith` / `pass123`. Verify session cookie creation and transition to Contact Dashboard.
+   - **Live Search**: Type `Sarah` in the search bar. Verify server-side filtering results.
+   - **Contact Management**: Click **Add New Contact**, populate modal, save, edit details, and test deletion.
 
-### 2.1 Repository Cloning & Environment Setup
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/TAvital04/COP4331C-Small-Project.git
-   cd COP4331C-Small-Project
-   ```
-2. Copy environment file template:
-   ```bash
-   cp .env.example .env
-   cp .env.example LAMPAPI/.env
-   ```
-3. Edit `.env` credentials:
-   ```env
-   DB_HOST=localhost
-   DB_USER=TheBeast
-   DB_PASSWORD=WeLoveCOP4331
-   DB_NAME=COP4331
-   DB_PORT=3306
-   ```
+### B. API Endpoint Verification (cURL Examples)
+Test API responses in your shell terminal:
 
-### 2.2 Database Schema Migration
-Import `init.sql` to initialize `Users` and `Contacts` relational schema:
 ```bash
-mysql -u TheBeast -p COP4331 < init.sql
-```
+# 1. Test Local Login Endpoint
+curl -X POST http://localhost/COP4331C/small-project/LAMPAPI/Login.php \
+  -H "Content-Type: application/json" \
+  -d "{\"login\":\"alexsmith\",\"password\":\"pass123\"}"
 
-### 2.3 Windows Local Setup Tutorial
-
-#### Method A: XAMPP Setup (Recommended for Windows)
-1. **Download & Install XAMPP**:
-   * Download XAMPP with PHP 8.1+ from [apachefriends.org](https://www.apachefriends.org/).
-   * Install to default location (`C:\xampp`).
-
-2. **Clone Repository into `htdocs`**:
-   Open Command Prompt, PowerShell, or Git Bash:
-   ```cmd
-   cd C:\xampp\htdocs
-   git clone https://github.com/TAvital04/COP4331C-Small-Project.git
-   cd COP4331C-Small-Project
-   ```
-
-3. **Configure Environment File**:
-   In PowerShell:
-   ```powershell
-   Copy-Item .env.example .env
-   Copy-Item .env.example LAMPAPI\.env
-   ```
-   Or in Command Prompt (`cmd.exe`):
-   ```cmd
-   copy .env.example .env
-   copy .env.example LAMPAPI\.env
-   ```
-   Configure `.env` credentials matching your local MySQL user:
-   ```env
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=
-   DB_NAME=COP4331
-   DB_PORT=3306
-   ```
-
-4. **Initialize MySQL Database in XAMPP**:
-   * Launch **XAMPP Control Panel** and click **Start** next to Apache and MySQL.
-   * Open Command Prompt and run:
-     ```cmd
-     C:\xampp\mysql\bin\mysql.exe -u root -e "CREATE DATABASE IF NOT EXISTS COP4331;"
-     C:\xampp\mysql\bin\mysql.exe -u root COP4331 < init.sql
-     ```
-   * Alternatively, navigate to `http://localhost/phpmyadmin`, create database `COP4331`, and import `init.sql`.
-
-5. **Access Application**:
-   * Open browser to `http://localhost/COP4331C-Small-Project/index.html` (Unified Portal) or `http://localhost/COP4331C-Small-Project/Index.html` (Contact App).
-
-#### Method B: Windows PowerShell & PHP Built-in Server
-1. Ensure PHP and MySQL binaries are added to Windows Environment `PATH`.
-2. In PowerShell:
-   ```powershell
-   git clone https://github.com/TAvital04/COP4331C-Small-Project.git
-   cd COP4331C-Small-Project
-   Copy-Item .env.example .env
-   ```
-3. Create database and import schema:
-   ```powershell
-   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS COP4331;"
-   mysql -u root -p COP4331 < init.sql
-   ```
-4. Start PHP local development server:
-   ```powershell
-   php -S localhost:8000
-   ```
-5. Open `http://localhost:8000/index.html` in your browser.
-
-#### Method C: WSL2 (Windows Subsystem for Linux)
-1. Launch WSL2 Ubuntu terminal:
-   ```bash
-   sudo apt update && sudo apt install php php-mysql mysql-server git -y
-   git clone https://github.com/TAvital04/COP4331C-Small-Project.git
-   cd COP4331C-Small-Project
-   cp .env.example .env
-   sudo service mysql start
-   sudo mysql -e "CREATE DATABASE IF NOT EXISTS COP4331;"
-   sudo mysql COP4331 < init.sql
-   php -S localhost:8000
-   ```
-
----
-
-## 3. Development Workflow & Git Branching Standards (Tal)
-
-### 3.1 Git Branching Strategy
-* **`main`**: Production release branch. All commits must pass code review and E2E verification.
-* **`feature/<feature-name>`**: Feature branches (e.g., `feature/contact-search`).
-* **`fix/<bug-name>`**: Bug fix branches (e.g., `fix/cors-preflight`).
-
-### 3.2 Commit Conventions & Pull Requests
-* **Commit Message Format**:
-  * `feat: ...` for new features
-  * `fix: ...` for bug fixes
-  * `docs: ...` for documentation updates
-  * `chore: ...` for maintenance and configuration
-* All Pull Requests require at least 1 peer approval before merging.
-
----
-
-## 4. Live Server Deployment Operations (Tal)
-
-### 4.1 Automated SSH Deployment Routine
-```bash
-# 1. Connect to production droplet
-ssh user@your-droplet-ip
-
-# 2. Navigate to project root
-cd /var/www/COP4331C-Small-Project
-
-# 3. Pull latest main release
-git pull origin main
-
-# 4. Verify web directory permissions
-sudo chown -R www-data:www-data /var/www/COP4331C-Small-Project
-
-# 5. Reload web server
-sudo systemctl reload apache2
+# 2. Test Live Server Login Endpoint
+curl -X POST https://talavital.com/COP4331C/small-project/LAMPAPI/Login.php \
+  -H "Content-Type: application/json" \
+  -d "{\"login\":\"alexsmith\",\"password\":\"pass123\"}"
 ```
 
 ---
 
-## 5. Accessibility & Performance Auditing (Andres)
+## Step 7: Role Responsibilities & Workflows
 
-### 5.1 Lighthouse Audit Results
-* **Performance Score**: `100%`
-* **Accessibility Score**: `100%`
-* **Best Practices**: `100%`
-* **SEO**: `100%`
-
-### 5.2 Accessibility Enhancements Applied
-1. **WCAG Color Contrast**: Contrast ratio between body text (`#f8fafc`), muted text (`#94a3b8`), and background (`#090d16` / `#131b2e`) exceeds `4.5:1` (AA level compliance).
-2. **Semantic Landmarks**: Document uses HTML5 structural landmarks (`<header>`, `<main>`, `<form>`, `<section>`).
-3. **Interactive Control Labels**:
-   * Icon-only buttons feature explicit `aria-label` attributes (`aria-label="Clear Search"`, `aria-label="Sign Out"`, `aria-label="Close modal"`).
-   * Dynamically generated contact card buttons include contextual ARIA labels (`aria-label="Edit contact Jane Doe"`).
-   * Search input element contains `aria-label="Search contacts by name, phone, or email"`.
-4. **Modal Dialog Accessibility**: Modals implement `role="dialog"` / `role="alertdialog"`, `aria-modal="true"`, and `aria-labelledby="modalTitle"`.
+Per the course progress guide:
+1. **Database Role**: Ensures table structures (`Users`, `Contacts`) are implemented cleanly with primary keys and indexed relationships.
+2. **API Backend Role**: Maintains PHP endpoints in `LAMPAPI/` (`Register`, `Login`, `AddContact`, `SearchContacts`, `EditContact`, `DeleteContact`), ensuring strict JSON input/output format and SQL injection prevention via prepared statements.
+3. **Front-End Role**: Enhances UI/UX in `index.html`, `css/styles.css`, and `js/code.js`, maintaining smooth AJAX communications, modals, and error toasts.
+4. **Project Manager**: Coordinates integration, monitors git pull requests, and maintains project documentation.
 
 ---
 
-## 6. End-to-End System Verification Checklist (Tal)
+## Step 8: Git Branching & Pull Requests
 
-| # | E2E Acceptance Test Step | Expected Behavior | Status |
-|---|--------------------------|-------------------|--------|
-| **1** | **User Registration** | `LAMPAPI/Register.php` inserts user into `Users` table; returns new `id`; switches tab to Sign In. | **PASSED** |
-| **2** | **Authentication Loop** | `LAMPAPI/Login.php` validates credentials; saves `userId`, `firstName`, `lastName` cookies; renders dashboard. | **PASSED** |
-| **3** | **Create Contacts** | `LAMPAPI/AddContact.php` inserts record into `Contacts` table linked to `UserID`; updates UI grid dynamically. | **PASSED** |
-| **4** | **Debounced Search** | Search input triggers debounced (250ms) query to `LAMPAPI/SearchContacts.php`; displays exact matches. | **PASSED** |
-| **5** | **Edit Contact Details** | Edit modal loads contact data; `LAMPAPI/EditContact.php` updates database record; UI refreshes without full reload. | **PASSED** |
-| **6** | **Delete Contact** | Confirmation modal prompts user; `LAMPAPI/DeleteContact.php` removes database row; element removed from DOM. | **PASSED** |
-| **7** | **Terminate Session** | Sign Out button invalidates cookies (`expires=Thu, 01 Jan 1970`); resets memory state; returns to login card. | **PASSED** |
+Follow this git workflow for all feature developments and bug fixes:
+
+1. **Update main branch**:
+   ```bash
+   git checkout main
+   git pull origin main
+   ```
+2. **Create feature branch**:
+   ```bash
+   git checkout -b feature/add-contact-validation
+   ```
+3. **Commit your changes**:
+   ```bash
+   git add .
+   git commit -m "feat(small-project): added phone number format validation"
+   ```
+4. **Push branch to GitHub**:
+   ```bash
+   git push -u origin feature/add-contact-validation
+   ```
+5. **Submit Pull Request**: Open PR on GitHub, assign a teammate for code review, and merge after approval!
