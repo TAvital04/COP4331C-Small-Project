@@ -177,8 +177,8 @@
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                         </svg>
-                        <input type="text" id="searchInput" placeholder="Search by name, phone, or email..." oninput="handleSearchInput();" />
-                        <button type="button" id="searchClearBtn" class="clear-btn" aria-label="Clear Search" onclick="clearSearch();">
+                        <input type="text" id="searchInput" placeholder="Search by name, phone, or email..." aria-label="Search contacts by name, phone, or email" oninput="handleSearchInput();" />
+                        <button type="button" id="searchClearBtn" class="clear-btn hidden" aria-label="Clear Search" onclick="clearSearch();">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -197,7 +197,7 @@
     </main>
 
     <!-- Add / Edit Contact Modal -->
-    <div id="contactModal" class="modal-overlay" aria-modal="true" role="dialog">
+    <div id="contactModal" class="modal-overlay" aria-modal="true" role="dialog" aria-labelledby="modalTitle">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">Add Contact</h3>

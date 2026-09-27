@@ -373,13 +373,15 @@ function renderContacts(contacts, query = "") {
 			<div class="contact-actions">
 				<button
 					type="button"
-					class="btn btn-secondary edit-contact">
+					class="btn btn-secondary edit-contact"
+					aria-label="Edit contact ${escapeHtml(fullName || 'Unnamed Contact')}">
 					Edit
 				</button>
 
 				<button
 					type="button"
-					class="btn btn-danger delete-contact">
+					class="btn btn-danger delete-contact"
+					aria-label="Delete contact ${escapeHtml(fullName || 'Unnamed Contact')}">
 					Delete
 				</button>
 			</div>
