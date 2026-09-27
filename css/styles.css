@@ -665,8 +665,18 @@ label {
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
+.btn:active,
+.action-btn:active,
+.modal-close:active {
+    transform: scale(0.98);
+}
+
 /* Modal Mobile Adjustments */
 @media (max-width: 640px) {
+    .contacts-grid {
+        grid-template-columns: 1fr;
+    }
+
     .modal-content {
         margin: 1rem;
         padding: 1.5rem;
