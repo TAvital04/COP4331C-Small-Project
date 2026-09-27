@@ -102,6 +102,85 @@ Import `init.sql` to initialize `Users` and `Contacts` relational schema:
 mysql -u TheBeast -p COP4331 < init.sql
 ```
 
+### 2.3 Windows Local Setup Tutorial
+
+#### Method A: XAMPP Setup (Recommended for Windows)
+1. **Download & Install XAMPP**:
+   * Download XAMPP with PHP 8.1+ from [apachefriends.org](https://www.apachefriends.org/).
+   * Install to default location (`C:\xampp`).
+
+2. **Clone Repository into `htdocs`**:
+   Open Command Prompt, PowerShell, or Git Bash:
+   ```cmd
+   cd C:\xampp\htdocs
+   git clone https://github.com/TAvital04/COP4331C-Small-Project.git
+   cd COP4331C-Small-Project
+   ```
+
+3. **Configure Environment File**:
+   In PowerShell:
+   ```powershell
+   Copy-Item .env.example .env
+   Copy-Item .env.example LAMPAPI\.env
+   ```
+   Or in Command Prompt (`cmd.exe`):
+   ```cmd
+   copy .env.example .env
+   copy .env.example LAMPAPI\.env
+   ```
+   Configure `.env` credentials matching your local MySQL user:
+   ```env
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=
+   DB_NAME=COP4331
+   DB_PORT=3306
+   ```
+
+4. **Initialize MySQL Database in XAMPP**:
+   * Launch **XAMPP Control Panel** and click **Start** next to Apache and MySQL.
+   * Open Command Prompt and run:
+     ```cmd
+     C:\xampp\mysql\bin\mysql.exe -u root -e "CREATE DATABASE IF NOT EXISTS COP4331;"
+     C:\xampp\mysql\bin\mysql.exe -u root COP4331 < init.sql
+     ```
+   * Alternatively, navigate to `http://localhost/phpmyadmin`, create database `COP4331`, and import `init.sql`.
+
+5. **Access Application**:
+   * Open browser to `http://localhost/COP4331C-Small-Project/index.html` (Unified Portal) or `http://localhost/COP4331C-Small-Project/Index.html` (Contact App).
+
+#### Method B: Windows PowerShell & PHP Built-in Server
+1. Ensure PHP and MySQL binaries are added to Windows Environment `PATH`.
+2. In PowerShell:
+   ```powershell
+   git clone https://github.com/TAvital04/COP4331C-Small-Project.git
+   cd COP4331C-Small-Project
+   Copy-Item .env.example .env
+   ```
+3. Create database and import schema:
+   ```powershell
+   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS COP4331;"
+   mysql -u root -p COP4331 < init.sql
+   ```
+4. Start PHP local development server:
+   ```powershell
+   php -S localhost:8000
+   ```
+5. Open `http://localhost:8000/index.html` in your browser.
+
+#### Method C: WSL2 (Windows Subsystem for Linux)
+1. Launch WSL2 Ubuntu terminal:
+   ```bash
+   sudo apt update && sudo apt install php php-mysql mysql-server git -y
+   git clone https://github.com/TAvital04/COP4331C-Small-Project.git
+   cd COP4331C-Small-Project
+   cp .env.example .env
+   sudo service mysql start
+   sudo mysql -e "CREATE DATABASE IF NOT EXISTS COP4331;"
+   sudo mysql COP4331 < init.sql
+   php -S localhost:8000
+   ```
+
 ---
 
 ## 3. Development Workflow & Git Branching Standards (Tal)
