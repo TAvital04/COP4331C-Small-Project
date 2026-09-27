@@ -1,6 +1,9 @@
 let userId = 0;
 let firstName = "";
 let lastName = "";
+let currentContacts = [];
+let searchTimeout = null;
+let deleteContactId = 0;
 
 function switchAuthTab(tab) {
 	const isLogin = tab === "login";
@@ -27,10 +30,32 @@ function switchAuthTab(tab) {
 function showToast(message, type = "success") {
 	const toast = document.createElement("div");
 	toast.className = `toast toast-${type}`;
-	toast.textContent = message;
+	const icon = document.createElement("span");
+	icon.className = "toast-icon";
+	icon.setAttribute("aria-hidden", "true");
+	icon.innerHTML = type === "success"
+		? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>`
+		: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"></path><path d="M12 9v5"></path><path d="M12 17h.01"></path></svg>`;
+
+	const text = document.createElement("span");
+	text.textContent = message;
+
+	toast.append(icon, text);
 	document.getElementById("toastContainer").appendChild(toast);
 
-	setTimeout(() => toast.remove(), 3000);
+	setTimeout(() => {
+		toast.classList.add("toast-exit");
+		setTimeout(() => toast.remove(), 300);
+	}, 3200);
+}
+
+function escapeJsString(value) {
+	return String(value)
+		.replaceAll("\\", "\\\\")
+                .replaceAll(String.fromCharCode(39), "\\'")
+		.replaceAll(String.fromCharCode(34), "\\\"")
+		.replaceAll(String.fromCharCode(10), "\\n")
+		.replaceAll(String.fromCharCode(13), "\\r");
 }
 
 function doLogin() {
@@ -180,6 +205,8 @@ function showDashboard() {
 	document.getElementById("navUserName").textContent = displayName;
 	document.getElementById("userAvatar").textContent = displayName.charAt(0).toUpperCase();
 	document.getElementById("dashboardGreeting").textContent = `Welcome, ${displayName}`;
+
+	searchContacts("");
 }
 
 function showAuth() {
@@ -198,6 +225,406 @@ function doLogout() {
 	firstName = "";
 	lastName = "";
 	showAuth();
+}
+function handleSearchInput() {
+	const searchInput = document.getElementById("searchInput");
+	const clearButton = document.getElementById("searchClearBtn");
+	const query = searchInput.value.trim();
+
+	clearButton.classList.toggle("hidden", query.length === 0);
+
+	clearTimeout(searchTimeout);
+
+	searchTimeout = setTimeout(() => {
+		searchContacts(query);
+	}, 250);
+}
+
+function clearSearch() {
+	const searchInput = document.getElementById("searchInput");
+	const clearButton = document.getElementById("searchClearBtn");
+
+	searchInput.value = "";
+	clearButton.classList.add("hidden");
+
+	searchContacts("");
+}
+
+function searchContacts(query = "") {
+	const xhr = new XMLHttpRequest();
+
+	xhr.open("POST", "LAMPAPI/SearchContacts.php", true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState !== XMLHttpRequest.DONE) {
+			return;
+		}
+
+		if (xhr.status !== 200) {
+			showToast("Unable to load contacts.", "error");
+			return;
+		}
+
+		let response;
+
+		try {
+    		response = JSON.parse(xhr.responseText);
+		} catch (error) {
+    		showToast("Invalid server response.", "error");
+    		return;
+		}
+
+		if (response.error) {
+			showToast(response.error, "error");
+			return;
+		}
+
+		currentContacts =
+			response.results ||
+			response.contacts ||
+			(Array.isArray(response) ? response : []);
+
+		renderContacts(currentContacts, query);
+	};
+
+	xhr.onerror = function () {
+		showToast("Network error. Please try again.", "error");
+	};
+
+	xhr.send(JSON.stringify({
+		search: query,
+		userId: userId
+	}));
+}
+
+function renderContacts(contacts, query = "") {
+	const container = document.getElementById("contactsGrid");
+
+	container.innerHTML = "";
+
+	if (!contacts || contacts.length === 0) {
+		container.innerHTML = `
+			<div id="empty-state" class="empty-state">
+				<h3>No contacts found</h3>
+				<p>
+					${query
+						? "Try another search."
+						: "Add your first contact to get started."}
+				</p>
+
+				<button
+					type="button"
+					class="btn btn-primary"
+					onclick="${query ? "clearSearch()" : "openContactModal('add')"}">
+					${query ? "Clear Search" : "Add Contact"}
+				</button>
+			</div>
+		`;
+
+		return;
+	}
+
+	contacts.forEach((contact) => {
+		const id =
+			contact.id ??
+			contact.ID ??
+			0;
+
+		const first =
+			contact.firstName ??
+			contact.FirstName ??
+			"";
+
+		const last =
+			contact.lastName ??
+			contact.LastName ??
+			"";
+
+		const phone =
+			contact.phone ??
+			contact.Phone ??
+			"";
+
+		const email =
+			contact.email ??
+			contact.Email ??
+			"";
+
+		const fullName = `${first} ${last}`.trim();
+
+		const initials =
+			`${first.charAt(0)}${last.charAt(0)}`.toUpperCase() || "?";
+
+		const card = document.createElement("div");
+		card.className = "contact-card";
+
+		card.innerHTML = `
+			<div class="contact-avatar">
+				${escapeHtml(initials)}
+			</div>
+
+			<div class="contact-info">
+				<h3>${escapeHtml(fullName || "Unnamed Contact")}</h3>
+				<p>${escapeHtml(formatPhone(phone))}</p>
+				<p>${escapeHtml(email)}</p>
+			</div>
+
+			<div class="contact-actions">
+				<button
+					type="button"
+					class="btn btn-secondary edit-contact">
+					Edit
+				</button>
+
+				<button
+					type="button"
+					class="btn btn-danger delete-contact">
+					Delete
+				</button>
+			</div>
+		`;
+
+		card.querySelector(".edit-contact").onclick = function () {
+			openContactModal("edit", Number(id));
+		};
+
+		card.querySelector(".delete-contact").onclick = function () {
+			openDeleteModal(Number(id), fullName);
+		};
+
+		container.appendChild(card);
+	});
+}
+
+function formatPhone(phone) {
+	const digits = String(phone).replace(/\D/g, "");
+
+	if (digits.length === 10) {
+		return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+	}
+
+	return phone;
+}
+
+function escapeHtml(value) {
+	return String(value)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+}
+
+function openContactModal(mode, contactId = 0) {
+	const modal = document.getElementById("contactModal");
+	const form = document.getElementById("contactForm");
+	const title = document.getElementById("modalTitle");
+
+	form.reset();
+
+	if (mode === "add") {
+		title.textContent = "Add Contact";
+		document.getElementById("contactId").value = 0;
+	} else {
+		const contact = currentContacts.find(
+			(item) =>
+				Number(item.id ?? item.ID) === Number(contactId)
+		);
+
+		if (!contact) {
+			showToast("Contact not found.", "error");
+			return;
+		}
+
+		title.textContent = "Edit Contact";
+
+		document.getElementById("contactId").value =
+			contact.id ??
+			contact.ID ??
+			0;
+
+		document.getElementById("contactFirstName").value =
+			contact.firstName ??
+			contact.FirstName ??
+			"";
+
+		document.getElementById("contactLastName").value =
+			contact.lastName ??
+			contact.LastName ??
+			"";
+
+		document.getElementById("contactPhone").value =
+			contact.phone ??
+			contact.Phone ??
+			"";
+
+		document.getElementById("contactEmail").value =
+			contact.email ??
+			contact.Email ??
+			"";
+	}
+
+	modal.classList.add("active");
+}
+
+function closeContactModal() {
+	document.getElementById("contactModal").classList.remove("active");
+}
+
+function saveContact() {
+	const contactId =
+		Number(document.getElementById("contactId").value) || 0;
+
+	const firstNameValue =
+		document.getElementById("contactFirstName").value.trim();
+
+	const lastNameValue =
+		document.getElementById("contactLastName").value.trim();
+
+	const phone =
+		document.getElementById("contactPhone").value.trim();
+
+	const email =
+		document.getElementById("contactEmail").value.trim();
+
+	if (!firstNameValue && !lastNameValue) {
+		showToast("At least one name is required.", "error");
+		return;
+	}
+
+	const endpoint =
+		contactId > 0
+			? "LAMPAPI/EditContact.php"
+			: "LAMPAPI/AddContact.php";
+
+	const data = {
+		firstName: firstNameValue,
+		lastName: lastNameValue,
+		phone,
+		email,
+		userId
+	};
+
+	if (contactId > 0) {
+		data.contactId = contactId;
+	}
+
+	const xhr = new XMLHttpRequest();
+
+	xhr.open("POST", endpoint, true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState !== XMLHttpRequest.DONE) {
+			return;
+		}
+
+		if (xhr.status !== 200) {
+			showToast("Unable to save contact.", "error");
+			return;
+		}
+
+		let response;
+
+		try {
+			response = JSON.parse(xhr.responseText);
+		} catch (error) {
+			showToast("Invalid server response.", "error");
+			return;
+		}
+
+		if (response.error) {
+			showToast(response.error, "error");
+			return;
+		}
+
+		closeContactModal();
+
+		showToast(
+			contactId > 0
+				? "Contact updated successfully."
+				: "Contact added successfully."
+		);
+
+		searchContacts(
+			document.getElementById("searchInput").value.trim()
+		);
+	};
+
+	xhr.onerror = function () {
+		showToast("Network error. Please try again.", "error");
+	};
+
+	xhr.send(JSON.stringify(data));
+}
+
+function openDeleteModal(id, name) {
+	deleteContactId = Number(id);
+
+	document.getElementById("deleteContactName").textContent =
+		name || "this contact";
+
+	document.getElementById("deleteModal").classList.add("active");
+}
+
+function closeDeleteModal() {
+	deleteContactId = 0;
+	document.getElementById("deleteModal").classList.remove("active");
+}
+
+function confirmDeleteContact() {
+	if (deleteContactId <= 0) {
+		return;
+	}
+
+	const contactIdToDelete = deleteContactId;
+
+	const xhr = new XMLHttpRequest();
+
+	xhr.open("POST", "LAMPAPI/DeleteContact.php", true);
+	xhr.setRequestHeader("Content-Type", "application/json");
+
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState !== XMLHttpRequest.DONE) {
+			return;
+		}
+
+		if (xhr.status !== 200) {
+			showToast("Unable to delete contact.", "error");
+			return;
+		}
+
+		let response;
+
+		try {
+			response = JSON.parse(xhr.responseText);
+		} catch (error) {
+			showToast("Invalid server response.", "error");
+			return;
+		}
+
+		if (response.error) {
+			showToast(response.error, "error");
+			return;
+		}
+
+		closeDeleteModal();
+		showToast("Contact deleted successfully.");
+
+		searchContacts(
+			document.getElementById("searchInput").value.trim()
+		);
+	};
+
+	xhr.onerror = function () {
+		showToast("Network error. Please try again.", "error");
+	};
+
+	xhr.send(JSON.stringify({
+		contactId: contactIdToDelete,
+		userId: userId
+	}));
 }
 
 document.addEventListener("DOMContentLoaded", readCookie);
