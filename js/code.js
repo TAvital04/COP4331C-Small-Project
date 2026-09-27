@@ -161,9 +161,18 @@ function doRegister() {
 	}));
 }
 
+function getCookiePath() {
+	const path = window.location.pathname;
+	if (path.indexOf("/small-project") !== -1) {
+		return "/small-project/";
+	}
+	return "/";
+}
+
 function saveCookie() {
 	const expires = new Date(Date.now() + 30 * 60 * 1000).toUTCString();
-	const cookieOptions = `expires=${expires}; path=/`;
+	const cookiePath = getCookiePath();
+	const cookieOptions = `expires=${expires}; path=${cookiePath}; SameSite=Lax`;
 
 	document.cookie = `firstName=${encodeURIComponent(firstName)}; ${cookieOptions}`;
 	document.cookie = `lastName=${encodeURIComponent(lastName)}; ${cookieOptions}`;
@@ -216,7 +225,8 @@ function showAuth() {
 }
 
 function doLogout() {
-	const expired = "expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+	const cookiePath = getCookiePath();
+	const expired = `expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${cookiePath}; SameSite=Lax`;
 	document.cookie = `firstName=; ${expired}`;
 	document.cookie = `lastName=; ${expired}`;
 	document.cookie = `userId=; ${expired}`;

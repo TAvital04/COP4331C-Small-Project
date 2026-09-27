@@ -4,10 +4,12 @@ info:
   description: Complete OpenAPI 3.0.0 specification for ContactSphere Personal Contact Directory backend REST services built with PHP and MySQL.
   version: 1.0.0
 servers:
+  - url: https://talavital.com/small-project
+    description: Production DigitalOcean Droplet Server
   - url: http://localhost:8000
     description: Local PHP Built-in Server
   - url: http://localhost/small-project
-    description: Apache LAMP Server
+    description: Local Apache LAMP Server
 
 paths:
   /LAMPAPI/Register.php:

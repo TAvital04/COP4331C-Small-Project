@@ -1,0 +1,35 @@
+# Apache Production Configuration for talavital.com/small-project
+
+# 1. Directory Index Resolution Priority
+DirectoryIndex index.html Index.html index.php
+
+# 2. Prevent Directory Browsing
+Options -Indexes +FollowSymLinks
+
+# 3. Default Character Encoding
+AddDefaultCharset UTF-8
+
+# 4. Restrict Access to Hidden & Sensitive Files
+<FilesMatch "^\.|\.env|init\.sql|README_DEV\.md|\.log$|\.sh$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 5. Security & CORS Headers
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# 6. Gzip Compression for Performance
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain application/json application/javascript
+</IfModule>
