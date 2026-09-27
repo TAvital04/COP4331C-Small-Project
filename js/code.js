@@ -30,10 +30,32 @@ function switchAuthTab(tab) {
 function showToast(message, type = "success") {
 	const toast = document.createElement("div");
 	toast.className = `toast toast-${type}`;
-	toast.textContent = message;
+	const icon = document.createElement("span");
+	icon.className = "toast-icon";
+	icon.setAttribute("aria-hidden", "true");
+	icon.innerHTML = type === "success"
+		? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>`
+		: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 20h19L12 3z"></path><path d="M12 9v5"></path><path d="M12 17h.01"></path></svg>`;
+
+	const text = document.createElement("span");
+	text.textContent = message;
+
+	toast.append(icon, text);
 	document.getElementById("toastContainer").appendChild(toast);
 
-	setTimeout(() => toast.remove(), 3000);
+	setTimeout(() => {
+		toast.classList.add("toast-exit");
+		setTimeout(() => toast.remove(), 300);
+	}, 3200);
+}
+
+function escapeJsString(value) {
+	return String(value)
+		.replaceAll("\\", "\\\\")
+                .replaceAll(String.fromCharCode(39), "\\'")
+		.replaceAll(String.fromCharCode(34), "\\\"")
+		.replaceAll(String.fromCharCode(10), "\\n")
+		.replaceAll(String.fromCharCode(13), "\\r");
 }
 
 function doLogin() {
